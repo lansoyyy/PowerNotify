@@ -76,6 +76,9 @@ dependencies:
   connectivity_plus: ^5.0.2
   permission_handler: ^11.1.0
   url_launcher: ^6.2.2
+  cloud_firestore:
+  firebase_storage:
+  firebase_auth:
 
 dev_dependencies:
   flutter_test:

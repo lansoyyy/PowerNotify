@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:powernotify/firebase_options.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -7,10 +8,15 @@ import 'screens/auth/signup_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/report_outage_screen.dart';
 import 'screens/settings_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+  await Firebase.initializeApp(
+    name: 'powernotify-64b1d',
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -18,7 +24,7 @@ void main() {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
-  
+
   runApp(const PowerNotifyApp());
 }
 
@@ -35,7 +41,7 @@ class PowerNotifyApp extends StatelessWidget {
         primaryColor: Colors.blue.shade700,
         scaffoldBackgroundColor: Colors.white,
         fontFamily: 'Regular',
-        
+
         // AppBar Theme
         appBarTheme: AppBarTheme(
           backgroundColor: Colors.blue.shade700,
@@ -49,7 +55,7 @@ class PowerNotifyApp extends StatelessWidget {
             fontFamily: 'Bold',
           ),
         ),
-        
+
         // Button Themes
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -67,7 +73,7 @@ class PowerNotifyApp extends StatelessWidget {
             ),
           ),
         ),
-        
+
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
             foregroundColor: Colors.blue.shade700,
@@ -78,7 +84,7 @@ class PowerNotifyApp extends StatelessWidget {
             ),
           ),
         ),
-        
+
         // Input Decoration Theme
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
@@ -99,9 +105,10 @@ class PowerNotifyApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Colors.red),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
-        
+
         // Card Theme
         cardTheme: CardTheme(
           elevation: 2,
@@ -110,7 +117,7 @@ class PowerNotifyApp extends StatelessWidget {
           ),
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         ),
-        
+
         // Bottom Navigation Bar Theme
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: Colors.white,
@@ -127,14 +134,14 @@ class PowerNotifyApp extends StatelessWidget {
           type: BottomNavigationBarType.fixed,
           elevation: 8,
         ),
-        
+
         // Floating Action Button Theme
         floatingActionButtonTheme: FloatingActionButtonThemeData(
           backgroundColor: Colors.red.shade600,
           foregroundColor: Colors.white,
           elevation: 4,
         ),
-        
+
         // Color Scheme
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.blue,
@@ -144,10 +151,10 @@ class PowerNotifyApp extends StatelessWidget {
           surface: Colors.white,
           background: Colors.grey.shade50,
         ),
-        
+
         useMaterial3: true,
       ),
-      
+
       // Routes
       initialRoute: '/',
       routes: {

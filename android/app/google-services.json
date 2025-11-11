@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "28378598397",
+    "project_id": "powernotify-64b1d",
+    "storage_bucket": "powernotify-64b1d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:28378598397:android:3d1836c73ec67d8cc7a794",
+        "android_client_info": {
+          "package_name": "com.example.powernotify"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAD-Tir03hxWXjd27_sjtt2hlZXzXw-2so"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
