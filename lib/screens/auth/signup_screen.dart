@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -31,22 +32,42 @@ class _SignupScreenState extends State<SignupScreen> {
     if (_formKey.currentState!.validate()) {
       if (!_agreedToTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please agree to the Terms and Conditions'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('Please agree to the Terms and Conditions'),
+            backgroundColor: Colors.red.shade600,
           ),
         );
         return;
       }
 
       setState(() => _isLoading = true);
-      
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-      
+
+      final authService = AuthService();
+      final result = await authService.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        name: _nameController.text.trim(),
+      );
+
       if (mounted) {
         setState(() => _isLoading = false);
-        Navigator.pushReplacementNamed(context, '/home');
+
+        if (result['success']) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message']),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Navigation will be handled by AuthWrapper automatically
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message']),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -179,7 +200,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                       onPressed: () {
                         setState(() {
-                          _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                          _isConfirmPasswordVisible =
+                              !_isConfirmPasswordVisible;
                         });
                       },
                     ),

@@ -123,9 +123,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         elevation: 2,
                       ),
                       child: Text(
-                        _currentPage == _pages.length - 1
-                            ? 'Get Started'
-                            : 'Next',
+                        _currentPage == _pages.length - 1 ? 'Sign In' : 'Next',
                         style: const TextStyle(
                           fontSize: 18,
                           fontFamily: 'Bold',
@@ -133,6 +131,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ),
                   ),
+                  if (_currentPage == _pages.length - 1) ...[
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.pushReplacementNamed(context, '/signup');
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Theme.of(context).primaryColor,
+                          side:
+                              BorderSide(color: Theme.of(context).primaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          'Create Account',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontFamily: 'Bold',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

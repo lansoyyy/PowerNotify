@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:powernotify/firebase_options.dart';
-import 'screens/splash_screen.dart';
-import 'screens/onboarding_screen.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/auth/signup_screen.dart';
+import 'widgets/auth_wrapper.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/report_outage_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/auth/signup_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
@@ -154,17 +154,16 @@ class PowerNotifyApp extends StatelessWidget {
 
         useMaterial3: true,
       ),
-
-      // Routes
-      initialRoute: '/',
+      home: const AuthWrapper(),
       routes: {
-        '/': (context) => const SplashScreen(),
-        '/onboarding': (context) => const OnboardingScreen(),
+        '/home': (context) => const HomeScreen(),
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignupScreen(),
-        '/home': (context) => const HomeScreen(),
+        '/forgot_password': (context) => const ForgotPasswordScreen(),
         '/report': (context) => const ReportOutageScreen(),
         '/settings': (context) => const SettingsScreen(),
+        '/notifications': (context) =>
+            const SettingsScreen(), // Temporary - will create notifications screen later
       },
     );
   }

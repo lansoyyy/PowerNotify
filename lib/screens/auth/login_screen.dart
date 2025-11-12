@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,13 +25,33 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-      
+
+      final AuthService authService = AuthService();
+      final result = await authService.signIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
       if (mounted) {
         setState(() => _isLoading = false);
-        Navigator.pushReplacementNamed(context, '/home');
+
+        if (result['success']) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message']),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Navigation will be handled by AuthWrapper automatically
+        } else {
+          print(result['message']);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message']),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -143,7 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // Navigate to forgot password
+                      Navigator.pushNamed(context, '/forgot_password');
                     },
                     child: Text(
                       'Forgot Password?',
