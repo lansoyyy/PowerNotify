@@ -42,9 +42,9 @@ class _LoginScreenState extends State<LoginScreen> {
               backgroundColor: Colors.green,
             ),
           );
+          Navigator.pushReplacementNamed(context, '/home');
           // Navigation will be handled by AuthWrapper automatically
         } else {
-          print(result['message']);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(result['message']),

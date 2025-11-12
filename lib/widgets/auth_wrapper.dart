@@ -4,7 +4,6 @@ import '../screens/onboarding_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../services/auth_service.dart';
 import '../models/user.dart' as app_user;
-import '../utils/colors.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -20,123 +19,175 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    _checkAuthState();
-  }
-
-  Future<void> _checkAuthState() async {
-    // Set up a listener to auth state changes
-    FirebaseAuth.instance.authStateChanges().listen((User? user) async {
-      if (user != null) {
-        // User is signed in
-        try {
-          // Get user data from Firestore
-          app_user.User? userData = await _authService.getUserData(user.uid);
-          if (userData != null) {
-            // User data exists, navigate to home
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
-              Navigator.of(context).pushReplacementNamed('/home');
-            }
-          } else {
-            // User is authenticated but no profile data, create basic profile
-            await _authService.updateUserProfile(
-              userId: user.uid,
-              name: user.displayName ?? 'User',
-              phoneNumber: null,
-            );
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
-              Navigator.of(context).pushReplacementNamed('/home');
-            }
-          }
-        } catch (e) {
-          // Error getting user data, sign out and show onboarding
-          await FirebaseAuth.instance.signOut();
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-          }
-        }
-      } else {
-        // User is not signed in, show onboarding
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+    // Initial loading state will be handled by StreamBuilder
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: Colors.blue.shade100,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Center(
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Icon(
-                    Icons.bolt,
-                    size: 50,
-                    color: Colors.blue.shade700,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Loading...',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting || _isLoading) {
           return Scaffold(
-            backgroundColor: AppColors.background,
+            backgroundColor: Colors.blue.shade100,
             body: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Icon(
+                      Icons.bolt,
+                      size: 50,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Loading...',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
               ),
             ),
           );
         }
 
-        if (snapshot.hasData) {
+        if (snapshot.hasData && snapshot.data != null) {
           // User is authenticated
-          return const HomeScreen();
+          return FutureBuilder<app_user.User?>(
+            future: _authService.getUserData(snapshot.data!.uid),
+            builder: (context, userSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting) {
+                return Scaffold(
+                  backgroundColor: Colors.blue.shade100,
+                  body: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(
+                            Icons.bolt,
+                            size: 50,
+                            color: Colors.blue.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.blue),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Loading profile...',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              if (userSnapshot.hasData && userSnapshot.data != null) {
+                // User data exists, show home
+                return const HomeScreen();
+              } else {
+                // User is authenticated but no profile data, create basic profile
+                return FutureBuilder(
+                  future: _createBasicProfile(snapshot.data!),
+                  builder: (context, createProfileSnapshot) {
+                    if (createProfileSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return Scaffold(
+                        backgroundColor: Colors.blue.shade100,
+                        body: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Icon(
+                                  Icons.bolt,
+                                  size: 50,
+                                  color: Colors.blue.shade700,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              const CircularProgressIndicator(
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.blue),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Setting up profile...',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    return const HomeScreen();
+                  },
+                );
+              }
+            },
+          );
         } else {
           // User is not authenticated
           return const OnboardingScreen();
         }
       },
     );
+  }
+
+  Future<void> _createBasicProfile(User user) async {
+    try {
+      await _authService.updateUserProfile(
+        userId: user.uid,
+        name: user.displayName ?? 'User',
+        phoneNumber: user.phoneNumber,
+      );
+    } catch (e) {
+      // If profile creation fails, still allow user to continue
+      // Error creating basic profile: $e
+    }
   }
 }

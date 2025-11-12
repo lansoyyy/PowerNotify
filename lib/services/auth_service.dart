@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/user.dart' as userModel;
+import '../models/user.dart' as user_model;
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -148,7 +148,7 @@ class AuthService {
   }
 
   // Get user data from Firestore
-  Future<userModel.User?> getUserData(String userId) async {
+  Future<user_model.User?> getUserData(String userId) async {
     try {
       DocumentSnapshot doc =
           await _firestore.collection('users').doc(userId).get();
@@ -156,7 +156,7 @@ class AuthService {
       if (doc.exists) {
         final data = doc.data();
         if (data != null) {
-          return userModel.User.fromJson(data as Map<String, dynamic>);
+          return user_model.User.fromJson(data as Map<String, dynamic>);
         }
       }
       return null;
@@ -173,7 +173,7 @@ class AuthService {
     String? address,
     double? latitude,
     double? longitude,
-    userModel.NotificationSettings? notificationSettings,
+    user_model.NotificationSettings? notificationSettings,
   }) async {
     try {
       Map<String, dynamic> updateData = {};
@@ -213,7 +213,7 @@ class AuthService {
     double? latitude,
     double? longitude,
   }) async {
-    userModel.User user = userModel.User(
+    user_model.User user = user_model.User(
       id: userId,
       email: email,
       name: name,
@@ -222,7 +222,7 @@ class AuthService {
       latitude: latitude,
       longitude: longitude,
       isAdmin: false,
-      notificationSettings: userModel.NotificationSettings.defaultSettings(),
+      notificationSettings: user_model.NotificationSettings.defaultSettings(),
       createdAt: DateTime.now(),
     );
 

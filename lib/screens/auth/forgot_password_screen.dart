@@ -40,6 +40,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               backgroundColor: Colors.green,
             ),
           );
+          Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

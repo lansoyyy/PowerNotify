@@ -59,6 +59,7 @@ class _SignupScreenState extends State<SignupScreen> {
               backgroundColor: Colors.green,
             ),
           );
+          Navigator.pushReplacementNamed(context, '/home');
           // Navigation will be handled by AuthWrapper automatically
         } else {
           ScaffoldMessenger.of(context).showSnackBar(

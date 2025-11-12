@@ -52,7 +52,7 @@ dependencies:
   path_provider: ^2.1.1
   
   # Notifications
-  firebase_messaging: ^14.7.9
+  firebase_messaging: ^14.7.10
   firebase_core: ^2.24.2
   
   # Image Handling
@@ -76,9 +76,9 @@ dependencies:
   connectivity_plus: ^5.0.2
   permission_handler: ^11.1.0
   url_launcher: ^6.2.2
-  cloud_firestore:
-  firebase_storage:
-  firebase_auth:
+  cloud_firestore: ^4.14.0
+  firebase_storage: ^11.6.0
+  firebase_auth: ^4.17.8
 
 dev_dependencies:
   flutter_test:
