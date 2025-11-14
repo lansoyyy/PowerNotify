@@ -3,6 +3,7 @@ import 'dashboard_screen.dart';
 import 'map_screen.dart';
 import 'history_screen.dart';
 import 'profile_screen.dart';
+import '../../utils/colors.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -43,8 +44,8 @@ class _HomeScreenState extends State<HomeScreen> {
             });
           },
           type: BottomNavigationBarType.fixed,
-          selectedItemColor: Colors.blue.shade700,
-          unselectedItemColor: Colors.grey.shade400,
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: AppColors.textSecondary,
           selectedFontSize: 12,
           unselectedFontSize: 12,
           items: const [
@@ -71,17 +72,16 @@ class _HomeScreenState extends State<HomeScreen> {
         onPressed: () {
           Navigator.pushNamed(context, '/report');
         },
-        backgroundColor: Colors.red.shade600,
-        icon: const Icon(Icons.report_problem, color: Colors.white),
+        backgroundColor: AppColors.error,
+        icon: const Icon(Icons.report_problem, color: AppColors.textWhite),
         label: const Text(
           'Report',
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.textWhite,
             fontFamily: 'Bold',
           ),
         ),
       ),
-     
     );
   }
 }

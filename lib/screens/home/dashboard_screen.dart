@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/power_status.dart';
+import '../../utils/colors.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -65,14 +66,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           'PowerNotify',
           style: TextStyle(
             fontFamily: 'Bold',
-            color: Colors.white,
+            color: AppColors.textWhite,
           ),
         ),
-        backgroundColor: Colors.blue.shade700,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white),
+            icon: const Icon(Icons.notifications, color: AppColors.textWhite),
             onPressed: () {
               Navigator.pushNamed(context, '/notifications');
             },
@@ -247,7 +248,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -343,7 +345,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildAlertItem(String title, String subtitle, Color color, IconData icon) {
+  Widget _buildAlertItem(
+      String title, String subtitle, Color color, IconData icon) {
     return Row(
       children: [
         Container(
@@ -429,7 +432,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildMaintenanceItem(String date, String time, String location, String reason) {
+  Widget _buildMaintenanceItem(
+      String date, String time, String location, String reason) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

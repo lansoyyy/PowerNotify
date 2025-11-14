@@ -8,6 +8,7 @@ import 'screens/settings_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
+import 'screens/auth/edit_profile_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
@@ -160,6 +161,7 @@ class PowerNotifyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignupScreen(),
         '/forgot_password': (context) => const ForgotPasswordScreen(),
+        '/edit_profile': (context) => const EditProfileScreen(),
         '/report': (context) => const ReportOutageScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/notifications': (context) =>
