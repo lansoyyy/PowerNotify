@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'power_status.dart';
 
 class Outage {
@@ -48,9 +49,13 @@ class Outage {
         (e) => e.name == json['type'],
         orElse: () => PowerStatusType.outage,
       ),
-      startTime: DateTime.parse(json['startTime'] as String),
+      startTime: json['startTime'] is Timestamp
+          ? (json['startTime'] as Timestamp).toDate()
+          : DateTime.parse(json['startTime'] as String),
       endTime: json['endTime'] != null
-          ? DateTime.parse(json['endTime'] as String)
+          ? json['endTime'] is Timestamp
+              ? (json['endTime'] as Timestamp).toDate()
+              : DateTime.parse(json['endTime'] as String)
           : null,
       duration: json['duration'] != null
           ? Duration(seconds: json['duration'] as int)

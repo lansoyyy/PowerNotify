@@ -4,12 +4,14 @@ import 'package:powernotify/firebase_options.dart';
 import 'widgets/auth_wrapper.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/report_outage_screen.dart';
+import 'screens/report_history_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/auth/edit_profile_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +19,9 @@ void main() async {
     name: 'powernotify-64b1d',
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Initialize notification service
+  await NotificationService().initialize();
 
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
@@ -163,6 +168,7 @@ class PowerNotifyApp extends StatelessWidget {
         '/forgot_password': (context) => const ForgotPasswordScreen(),
         '/edit_profile': (context) => const EditProfileScreen(),
         '/report': (context) => const ReportOutageScreen(),
+        '/report-history': (context) => const ReportHistoryScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/notifications': (context) =>
             const SettingsScreen(), // Temporary - will create notifications screen later

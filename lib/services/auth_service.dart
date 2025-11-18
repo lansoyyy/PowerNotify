@@ -89,9 +89,9 @@ class AuthService {
 
       if (user != null) {
         // Update last login timestamp
-        await _firestore.collection('users').doc(user.uid).update({
-          'lastLogin': Timestamp.now(),
-        });
+        // await _firestore.collection('users').doc(user.uid).update({
+        //   'lastLogin': Timestamp.now(),
+        // });
 
         return {
           'success': true,

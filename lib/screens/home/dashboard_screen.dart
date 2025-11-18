@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/power_status.dart';
+import '../../models/outage.dart';
+import '../../models/user_report.dart';
 import '../../utils/colors.dart';
+import '../../services/power_status_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -11,21 +14,35 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  PowerStatusType _currentStatus = PowerStatusType.normal;
-  DateTime? _estimatedRestoration;
-  Duration _outageDuration = Duration.zero;
+  final PowerStatusService _powerStatusService = PowerStatusService();
+
+  PowerStatus? _currentPowerStatus;
+  List<Outage> _activeOutages = [];
+  List<Outage> _scheduledMaintenance = [];
+  List<UserReport> _recentReports = [];
+  Map<String, dynamic> _dashboardStats = {};
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Simulate different statuses for demo
-    _currentStatus = PowerStatusType.normal;
-    _estimatedRestoration = DateTime.now().add(const Duration(hours: 2));
-    _outageDuration = const Duration(hours: 1, minutes: 30);
+    _initializeData();
   }
 
-  Color _getStatusColor() {
-    switch (_currentStatus) {
+  Future<void> _initializeData() async {
+    try {
+      // Initialize default data if needed
+      await _powerStatusService.initializeDefaultData();
+
+      // Calculate initial statistics
+      await _powerStatusService.calculateStats();
+    } catch (e) {
+      print('Error initializing data: $e');
+    }
+  }
+
+  Color _getStatusColor(PowerStatusType status) {
+    switch (status) {
       case PowerStatusType.normal:
         return Colors.green;
       case PowerStatusType.outage:
@@ -35,8 +52,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  String _getStatusText() {
-    switch (_currentStatus) {
+  String _getStatusText(PowerStatusType status) {
+    switch (status) {
       case PowerStatusType.normal:
         return 'Power On';
       case PowerStatusType.outage:
@@ -46,8 +63,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  IconData _getStatusIcon() {
-    switch (_currentStatus) {
+  IconData _getStatusIcon(PowerStatusType status) {
+    switch (status) {
       case PowerStatusType.normal:
         return Icons.check_circle;
       case PowerStatusType.outage:
@@ -80,45 +97,108 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await Future.delayed(const Duration(seconds: 1));
-          setState(() {});
+      body: StreamBuilder<PowerStatus?>(
+        stream: _powerStatusService.getCurrentPowerStatus(),
+        builder: (context, statusSnapshot) {
+          return StreamBuilder<List<Outage>>(
+            stream: _powerStatusService.getActiveOutages(),
+            builder: (context, activeOutagesSnapshot) {
+              return StreamBuilder<List<Outage>>(
+                stream: _powerStatusService.getScheduledMaintenance(),
+                builder: (context, scheduledSnapshot) {
+                  return StreamBuilder<List<UserReport>>(
+                    stream: _powerStatusService.getRecentReports(),
+                    builder: (context, reportsSnapshot) {
+                      return StreamBuilder<Map<String, dynamic>>(
+                        stream: _powerStatusService.getDashboardStats(),
+                        builder: (context, statsSnapshot) {
+                          // Update state when data changes
+                          if (statusSnapshot.hasData) {
+                            _currentPowerStatus = statusSnapshot.data;
+                          }
+                          if (activeOutagesSnapshot.hasData) {
+                            _activeOutages = activeOutagesSnapshot.data!;
+                          }
+                          if (scheduledSnapshot.hasData) {
+                            _scheduledMaintenance = scheduledSnapshot.data!;
+                          }
+                          if (reportsSnapshot.hasData) {
+                            _recentReports = reportsSnapshot.data!;
+                          }
+                          if (statsSnapshot.hasData) {
+                            _dashboardStats = statsSnapshot.data!;
+                          }
+
+                          // Set loading state
+                          _isLoading = !statusSnapshot.hasData &&
+                              !activeOutagesSnapshot.hasData &&
+                              !scheduledSnapshot.hasData &&
+                              !reportsSnapshot.hasData &&
+                              !statsSnapshot.hasData;
+
+                          return RefreshIndicator(
+                            onRefresh: () async {
+                              await _powerStatusService.calculateStats();
+                              setState(() {});
+                            },
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: Column(
+                                children: [
+                                  _buildStatusCard(),
+                                  const SizedBox(height: 16),
+                                  _buildQuickStats(),
+                                  const SizedBox(height: 16),
+                                  _buildActiveAlerts(),
+                                  const SizedBox(height: 16),
+                                  _buildScheduledMaintenance(),
+                                  const SizedBox(height: 100), // Space for FAB
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          );
         },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            children: [
-              _buildStatusCard(),
-              const SizedBox(height: 16),
-              _buildQuickStats(),
-              const SizedBox(height: 16),
-              _buildActiveAlerts(),
-              const SizedBox(height: 16),
-              _buildScheduledMaintenance(),
-              const SizedBox(height: 100), // Space for FAB
-            ],
-          ),
-        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.pushNamed(context, '/report');
+        },
+        backgroundColor: Colors.red.shade600,
+        child: const Icon(Icons.add),
       ),
     );
   }
 
   Widget _buildStatusCard() {
+    if (_currentPowerStatus == null) {
+      return _buildLoadingCard();
+    }
+
+    PowerStatusType status = _currentPowerStatus!.status;
+    Color statusColor = _getStatusColor(status);
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            _getStatusColor(),
-            _getStatusColor().withOpacity(0.7),
+            statusColor,
+            statusColor.withOpacity(0.7),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: _getStatusColor().withOpacity(0.3),
+            color: statusColor.withOpacity(0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -127,13 +207,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         children: [
           Icon(
-            _getStatusIcon(),
+            _getStatusIcon(status),
             size: 80,
             color: Colors.white,
           ),
           const SizedBox(height: 16),
           Text(
-            _getStatusText(),
+            _getStatusText(status),
             style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -143,14 +223,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Last updated: ${DateFormat('MMM dd, yyyy hh:mm a').format(DateTime.now())}',
+            'Last updated: ${DateFormat('MMM dd, yyyy hh:mm a').format(_currentPowerStatus!.timestamp)}',
             style: TextStyle(
               fontSize: 14,
               color: Colors.white.withOpacity(0.9),
               fontFamily: 'Regular',
             ),
           ),
-          if (_currentStatus != PowerStatusType.normal) ...[
+          if (_currentPowerStatus!.message != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _currentPowerStatus!.message!,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withOpacity(0.9),
+                fontFamily: 'Regular',
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+          if (status != PowerStatusType.normal) ...[
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -160,27 +252,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               child: Column(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Duration:',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'Medium',
+                  if (_activeOutages.isNotEmpty) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Duration:',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontFamily: 'Medium',
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${_outageDuration.inHours}h ${_outageDuration.inMinutes % 60}m',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'Bold',
-                          fontSize: 16,
+                        Text(
+                          '${_activeOutages.first.actualDuration.inHours}h ${_activeOutages.first.actualDuration.inMinutes % 60}m',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontFamily: 'Bold',
+                            fontSize: 16,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  if (_estimatedRestoration != null) ...[
+                      ],
+                    ),
+                  ],
+                  if (_currentPowerStatus!.estimatedRestoration != null) ...[
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -193,7 +287,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         Text(
-                          DateFormat('hh:mm a').format(_estimatedRestoration!),
+                          DateFormat('hh:mm a').format(
+                              _currentPowerStatus!.estimatedRestoration!),
                           style: const TextStyle(
                             color: Colors.white,
                             fontFamily: 'Bold',
@@ -212,7 +307,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildLoadingCard() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
+      height: 250,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+  }
+
   Widget _buildQuickStats() {
+    if (_dashboardStats.isEmpty) {
+      return _buildLoadingStats();
+    }
+
+    String activeOutages = _dashboardStats['activeOutages']?.toString() ?? '0';
+    String affectedUsers =
+        _formatAffectedUsers(_dashboardStats['affectedUsers']?.toInt() ?? 0);
+    String avgDuration =
+        '${_dashboardStats['avgDuration']?.toString() ?? '0.0'}h';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -220,7 +347,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Expanded(
             child: _buildStatCard(
               'Active Outages',
-              '3',
+              activeOutages,
               Icons.power_off,
               Colors.red,
             ),
@@ -229,7 +356,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Expanded(
             child: _buildStatCard(
               'Affected Users',
-              '1.2K',
+              affectedUsers,
               Icons.people,
               Colors.orange,
             ),
@@ -238,7 +365,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Expanded(
             child: _buildStatCard(
               'Avg. Duration',
-              '2.5h',
+              avgDuration,
               Icons.timer,
               Colors.blue,
             ),
@@ -246,6 +373,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildLoadingStats() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(child: _buildLoadingStatCard()),
+          const SizedBox(width: 12),
+          Expanded(child: _buildLoadingStatCard()),
+          const SizedBox(width: 12),
+          Expanded(child: _buildLoadingStatCard()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingStatCard() {
+    return Container(
+      height: 100,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    );
+  }
+
+  String _formatAffectedUsers(int users) {
+    if (users >= 1000) {
+      return '${(users / 1000).toStringAsFixed(1)}K';
+    }
+    return users.toString();
   }
 
   Widget _buildStatCard(
@@ -292,6 +461,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildActiveAlerts() {
+    List<Widget> alertItems = [];
+
+    // Add active outages
+    for (var outage in _activeOutages.take(3)) {
+      alertItems.add(_buildAlertItem(
+        'Power Outage',
+        '${outage.affectedArea} - ${outage.affectedBarangays.join(", ")}',
+        Colors.red,
+        Icons.power_off,
+      ));
+      if (outage != _activeOutages.last) {
+        alertItems.add(const Divider(height: 24));
+      }
+    }
+
+    // Add recent reports if no active outages
+    if (_activeOutages.isEmpty && _recentReports.isNotEmpty) {
+      for (var report in _recentReports.take(2)) {
+        alertItems.add(_buildAlertItem(
+          'New Report',
+          report.description.length > 50
+              ? '${report.description.substring(0, 50)}...'
+              : report.description,
+          Colors.orange,
+          Icons.report_problem,
+        ));
+        if (report != _recentReports.last) {
+          alertItems.add(const Divider(height: 24));
+        }
+      }
+    }
+
+    // Show placeholder if no alerts
+    if (alertItems.isEmpty) {
+      alertItems.add(
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Text(
+            'No active alerts at this time',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontFamily: 'Regular',
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -321,25 +539,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamed(context, '/history');
+                },
                 child: const Text('View All'),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _buildAlertItem(
-            'Power Outage',
-            'Barangay San Jose - Estimated 2 hours',
-            Colors.red,
-            Icons.power_off,
-          ),
-          const Divider(height: 24),
-          _buildAlertItem(
-            'Scheduled Maintenance',
-            'Barangay Santa Cruz - Tomorrow 8:00 AM',
-            Colors.amber,
-            Icons.schedule,
-          ),
+          ...alertItems,
         ],
       ),
     );
@@ -388,6 +596,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildScheduledMaintenance() {
+    List<Widget> maintenanceItems = [];
+
+    // Add scheduled maintenance items
+    for (var maintenance in _scheduledMaintenance.take(3)) {
+      maintenanceItems.add(_buildMaintenanceItem(
+        DateFormat('MMM dd, yyyy').format(maintenance.startTime),
+        '${DateFormat('hh:mm a').format(maintenance.startTime)} - ${maintenance.endTime != null ? DateFormat('hh:mm a').format(maintenance.endTime!) : 'Ongoing'}',
+        maintenance.affectedArea,
+        maintenance.reason ?? 'Scheduled maintenance',
+      ));
+
+      if (maintenance != _scheduledMaintenance.last) {
+        maintenanceItems.add(const Divider(height: 24));
+      }
+    }
+
+    // Show placeholder if no scheduled maintenance
+    if (maintenanceItems.isEmpty) {
+      maintenanceItems.add(
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Text(
+            'No scheduled maintenance at this time',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontFamily: 'Regular',
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -414,19 +655,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          _buildMaintenanceItem(
-            'Nov 10, 2025',
-            '8:00 AM - 12:00 PM',
-            'Barangay Santa Cruz, San Jose',
-            'Transformer upgrade',
-          ),
-          const Divider(height: 24),
-          _buildMaintenanceItem(
-            'Nov 15, 2025',
-            '6:00 AM - 10:00 AM',
-            'Barangay Poblacion',
-            'Line maintenance',
-          ),
+          ...maintenanceItems,
         ],
       ),
     );

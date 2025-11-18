@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class UserReport {
   final String id;
   final String userId;
@@ -29,18 +31,21 @@ class UserReport {
     return UserReport(
       id: json['id'] as String,
       userId: json['userId'] as String,
-      timestamp: DateTime.parse(json['timestamp'] as String),
+      timestamp: json['timestamp'] is Timestamp
+          ? (json['timestamp'] as Timestamp).toDate()
+          : DateTime.parse(json['timestamp'] as String),
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
       address: json['address'] as String?,
       description: json['description'] as String,
-      photoUrls: (json['photoUrls'] as List<dynamic>)
-          .map((e) => e as String)
-          .toList(),
+      photoUrls:
+          (json['photoUrls'] as List<dynamic>).map((e) => e as String).toList(),
       status: json['status'] as String? ?? 'pending',
       adminNotes: json['adminNotes'] as String?,
       verifiedAt: json['verifiedAt'] != null
-          ? DateTime.parse(json['verifiedAt'] as String)
+          ? json['verifiedAt'] is Timestamp
+              ? (json['verifiedAt'] as Timestamp).toDate()
+              : DateTime.parse(json['verifiedAt'] as String)
           : null,
     );
   }

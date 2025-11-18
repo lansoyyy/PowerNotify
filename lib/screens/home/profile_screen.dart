@@ -24,8 +24,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadUserData() async {
     try {
       final userId = _authService.currentUserId;
+
       if (userId != null) {
         final userData = await _authService.getUserData(userId);
+
         if (mounted) {
           setState(() {
             _currentUser = userData;

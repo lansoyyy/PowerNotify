@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class User {
   final String id;
   final String email;
@@ -30,13 +32,20 @@ class User {
       name: json['name'] as String,
       phoneNumber: json['phoneNumber'] as String?,
       address: json['address'] as String?,
-      latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
-      longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
+      latitude: json['latitude'] != null
+          ? (json['latitude'] as num).toDouble()
+          : null,
+      longitude: json['longitude'] != null
+          ? (json['longitude'] as num).toDouble()
+          : null,
       isAdmin: json['isAdmin'] as bool? ?? false,
       notificationSettings: json['notificationSettings'] != null
-          ? NotificationSettings.fromJson(json['notificationSettings'] as Map<String, dynamic>)
+          ? NotificationSettings.fromJson(
+              json['notificationSettings'] as Map<String, dynamic>)
           : NotificationSettings.defaultSettings(),
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: json['createdAt'] is Timestamp
+          ? (json['createdAt'] as Timestamp).toDate()
+          : DateTime.parse(json['createdAt'] as String),
     );
   }
 
@@ -100,8 +109,10 @@ class NotificationSettings {
       soundEnabled: json['soundEnabled'] as bool? ?? true,
       vibrationEnabled: json['vibrationEnabled'] as bool? ?? true,
       scheduledOutagesEnabled: json['scheduledOutagesEnabled'] as bool? ?? true,
-      unscheduledOutagesEnabled: json['unscheduledOutagesEnabled'] as bool? ?? true,
-      restorationAlertsEnabled: json['restorationAlertsEnabled'] as bool? ?? true,
+      unscheduledOutagesEnabled:
+          json['unscheduledOutagesEnabled'] as bool? ?? true,
+      restorationAlertsEnabled:
+          json['restorationAlertsEnabled'] as bool? ?? true,
       quietHoursStart: json['quietHoursStart'] as int? ?? 22,
       quietHoursEnd: json['quietHoursEnd'] as int? ?? 7,
     );
@@ -137,9 +148,12 @@ class NotificationSettings {
       smsEnabled: smsEnabled ?? this.smsEnabled,
       soundEnabled: soundEnabled ?? this.soundEnabled,
       vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
-      scheduledOutagesEnabled: scheduledOutagesEnabled ?? this.scheduledOutagesEnabled,
-      unscheduledOutagesEnabled: unscheduledOutagesEnabled ?? this.unscheduledOutagesEnabled,
-      restorationAlertsEnabled: restorationAlertsEnabled ?? this.restorationAlertsEnabled,
+      scheduledOutagesEnabled:
+          scheduledOutagesEnabled ?? this.scheduledOutagesEnabled,
+      unscheduledOutagesEnabled:
+          unscheduledOutagesEnabled ?? this.unscheduledOutagesEnabled,
+      restorationAlertsEnabled:
+          restorationAlertsEnabled ?? this.restorationAlertsEnabled,
       quietHoursStart: quietHoursStart ?? this.quietHoursStart,
       quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,
     );

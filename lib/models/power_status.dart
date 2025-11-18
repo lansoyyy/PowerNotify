@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum PowerStatusType {
   normal, // Green - Power on
   outage, // Red - Power outage
@@ -28,10 +30,14 @@ class PowerStatus {
         (e) => e.name == json['status'],
         orElse: () => PowerStatusType.normal,
       ),
-      timestamp: DateTime.parse(json['timestamp'] as String),
+      timestamp: json['timestamp'] is Timestamp
+          ? (json['timestamp'] as Timestamp).toDate()
+          : DateTime.parse(json['timestamp'] as String),
       message: json['message'] as String?,
       estimatedRestoration: json['estimatedRestoration'] != null
-          ? DateTime.parse(json['estimatedRestoration'] as String)
+          ? json['estimatedRestoration'] is Timestamp
+              ? (json['estimatedRestoration'] as Timestamp).toDate()
+              : DateTime.parse(json['estimatedRestoration'] as String)
           : null,
       affectedArea: json['affectedArea'] as String?,
     );
