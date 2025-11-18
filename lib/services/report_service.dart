@@ -103,6 +103,34 @@ class ReportService {
     }
   }
 
+  // Get user reports as stream for real-time updates
+  Stream<List<UserReport>> getUserReportsStream(String userId) {
+    return _firestore
+        .collection('user_reports')
+        .where('userId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => UserReport.fromJson(doc.data() as Map<String, dynamic>))
+          .toList();
+    });
+  }
+
+  // Get all user reports as stream (for admin)
+  Stream<List<UserReport>> getAllUserReportsStream() {
+    return _firestore
+        .collection('user_reports')
+        .orderBy('timestamp', descending: true)
+        .limit(50) // Limit for performance
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => UserReport.fromJson(doc.data() as Map<String, dynamic>))
+          .toList();
+    });
+  }
+
   // Get all pending reports (for admin)
   Future<List<UserReport>> getPendingReports() async {
     try {

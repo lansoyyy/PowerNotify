@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../models/power_status.dart';
+import '../../models/outage.dart';
+import '../../models/user_report.dart';
+import '../../services/power_status_service.dart';
+import '../../services/report_service.dart';
+import '../../utils/colors.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -12,28 +18,239 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
-  
-  // Sample outage locations
-  final List<OutageMarker> _outageMarkers = [
-    OutageMarker(
-      position: const LatLng(14.5995, 120.9842), // Manila
-      type: PowerStatusType.outage,
-      area: 'Barangay San Jose',
-      affectedUsers: 450,
-    ),
-    OutageMarker(
-      position: const LatLng(14.6091, 120.9823),
-      type: PowerStatusType.scheduled,
-      area: 'Barangay Santa Cruz',
-      affectedUsers: 320,
-    ),
-    OutageMarker(
-      position: const LatLng(14.5932, 120.9762),
-      type: PowerStatusType.outage,
-      area: 'Barangay Poblacion',
-      affectedUsers: 580,
-    ),
-  ];
+  final PowerStatusService _powerStatusService = PowerStatusService();
+  final ReportService _reportService = ReportService();
+
+  List<Outage> _activeOutages = [];
+  List<Outage> _scheduledMaintenance = [];
+  List<UserReport> _userReports = [];
+  LatLng? _userLocation;
+  bool _isLoading = true;
+  bool _showOutages = true;
+  bool _showScheduled = true;
+  bool _showReports = true;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeMap();
+  }
+
+  Future<void> _initializeMap() async {
+    await _getCurrentLocation();
+    _loadMapData();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location services are disabled.')),
+        );
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location permissions are denied.')),
+          );
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Location permissions are permanently denied.')),
+        );
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        _userLocation = LatLng(position.latitude, position.longitude);
+      });
+
+      // Center map on user location
+      _mapController.move(_userLocation!, 15.0);
+    } catch (e) {
+      print('Error getting location: $e');
+    }
+  }
+
+  void _loadMapData() {
+    // Load active outages
+    _powerStatusService.getActiveOutages().listen((outages) {
+      setState(() {
+        _activeOutages = outages;
+        _isLoading = false;
+      });
+    });
+
+    // Load scheduled maintenance
+    _powerStatusService.getScheduledMaintenance().listen((maintenance) {
+      setState(() {
+        _scheduledMaintenance = maintenance;
+      });
+    });
+
+    // Load recent user reports
+    _powerStatusService.getRecentReports().listen((reports) {
+      setState(() {
+        _userReports = reports;
+      });
+    });
+  }
+
+  List<Marker> _buildMarkers() {
+    List<Marker> markers = [];
+
+    // Add user location marker
+    if (_userLocation != null) {
+      markers.add(
+        Marker(
+          point: _userLocation!,
+          width: 40,
+          height: 40,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.blue,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.my_location,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Add outage markers
+    if (_showOutages) {
+      for (var outage in _activeOutages) {
+        markers.add(
+          Marker(
+            point: LatLng(outage.latitude, outage.longitude),
+            width: 50,
+            height: 50,
+            child: GestureDetector(
+              onTap: () => _showOutageDetails(outage),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.power_off,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    // Add scheduled maintenance markers
+    if (_showScheduled) {
+      for (var maintenance in _scheduledMaintenance) {
+        markers.add(
+          Marker(
+            point: LatLng(maintenance.latitude, maintenance.longitude),
+            width: 50,
+            height: 50,
+            child: GestureDetector(
+              onTap: () => _showOutageDetails(maintenance),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.amber,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.schedule,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    // Add user report markers
+    if (_showReports) {
+      for (var report in _userReports) {
+        markers.add(
+          Marker(
+            point: LatLng(report.latitude, report.longitude),
+            width: 40,
+            height: 40,
+            child: GestureDetector(
+              onTap: () => _showReportDetails(report),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.report_problem,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    return markers;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,15 +263,16 @@ class _MapScreenState extends State<MapScreen> {
             color: Colors.white,
           ),
         ),
-        backgroundColor: Colors.blue.shade700,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.my_location, color: Colors.white),
-            onPressed: () {
-              // Center map on user location
-              _mapController.move(const LatLng(14.5995, 120.9842), 13);
-            },
+            icon: const Icon(Icons.search, color: Colors.white),
+            onPressed: _showSearchDialog,
+          ),
+          IconButton(
+            icon: const Icon(Icons.filter_list, color: Colors.white),
+            onPressed: _showFilterDialog,
           ),
         ],
       ),
@@ -62,8 +280,8 @@ class _MapScreenState extends State<MapScreen> {
         children: [
           FlutterMap(
             mapController: _mapController,
-            options: const MapOptions(
-              initialCenter: LatLng(14.5995, 120.9842),
+            options: MapOptions(
+              initialCenter: _userLocation ?? const LatLng(14.5995, 120.9842),
               initialZoom: 13.0,
               minZoom: 10.0,
               maxZoom: 18.0,
@@ -74,37 +292,23 @@ class _MapScreenState extends State<MapScreen> {
                 userAgentPackageName: 'com.powernotify.app',
               ),
               MarkerLayer(
-                markers: _outageMarkers.map((outage) {
-                  return Marker(
-                    point: outage.position,
-                    width: 50,
-                    height: 50,
-                    child: GestureDetector(
-                      onTap: () => _showOutageDetails(outage),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: _getMarkerColor(outage.type),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          _getMarkerIcon(outage.type),
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
+                markers: _buildMarkers(),
               ),
             ],
+          ),
+          if (_isLoading)
+            const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          Positioned(
+            top: 16,
+            right: 16,
+            child: FloatingActionButton(
+              mini: true,
+              onPressed: _centerOnUserLocation,
+              backgroundColor: Colors.white,
+              child: const Icon(Icons.my_location, color: AppColors.primary),
+            ),
           ),
           Positioned(
             bottom: 16,
@@ -117,26 +321,88 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Color _getMarkerColor(PowerStatusType type) {
-    switch (type) {
-      case PowerStatusType.outage:
-        return Colors.red;
-      case PowerStatusType.scheduled:
-        return Colors.amber;
-      case PowerStatusType.normal:
-        return Colors.green;
+  void _centerOnUserLocation() {
+    if (_userLocation != null) {
+      _mapController.move(_userLocation!, 15.0);
+    } else {
+      _getCurrentLocation();
     }
   }
 
-  IconData _getMarkerIcon(PowerStatusType type) {
-    switch (type) {
-      case PowerStatusType.outage:
-        return Icons.power_off;
-      case PowerStatusType.scheduled:
-        return Icons.schedule;
-      case PowerStatusType.normal:
-        return Icons.check;
-    }
+  void _showSearchDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Search Location'),
+        content: TextField(
+          controller: _searchController,
+          decoration: const InputDecoration(
+            hintText: 'Enter location name or address',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              // TODO: Implement location search
+              Navigator.pop(context);
+            },
+            child: const Text('Search'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Filter Map'),
+        content: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CheckboxListTile(
+                title: const Text('Active Outages'),
+                value: _showOutages,
+                onChanged: (value) {
+                  setState(() => _showOutages = value!);
+                  this.setState(() {});
+                },
+              ),
+              CheckboxListTile(
+                title: const Text('Scheduled Maintenance'),
+                value: _showScheduled,
+                onChanged: (value) {
+                  setState(() => _showScheduled = value!);
+                  this.setState(() {});
+                },
+              ),
+              CheckboxListTile(
+                title: const Text('User Reports'),
+                value: _showReports,
+                onChanged: (value) {
+                  setState(() => _showReports = value!);
+                  this.setState(() {});
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildLegend() {
@@ -169,9 +435,10 @@ class _MapScreenState extends State<MapScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
+              _buildLegendItem(Colors.blue, 'You'),
               _buildLegendItem(Colors.red, 'Outage'),
               _buildLegendItem(Colors.amber, 'Scheduled'),
-              _buildLegendItem(Colors.green, 'Normal'),
+              _buildLegendItem(Colors.orange, 'Report'),
             ],
           ),
         ],
@@ -202,7 +469,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  void _showOutageDetails(OutageMarker outage) {
+  void _showOutageDetails(Outage outage) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -220,12 +487,18 @@ class _MapScreenState extends State<MapScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: _getMarkerColor(outage.type).withOpacity(0.1),
+                      color: outage.type == PowerStatusType.outage
+                          ? Colors.red.withOpacity(0.1)
+                          : Colors.amber.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      _getMarkerIcon(outage.type),
-                      color: _getMarkerColor(outage.type),
+                      outage.type == PowerStatusType.outage
+                          ? Icons.power_off
+                          : Icons.schedule,
+                      color: outage.type == PowerStatusType.outage
+                          ? Colors.red
+                          : Colors.amber,
                       size: 32,
                     ),
                   ),
@@ -235,7 +508,7 @@ class _MapScreenState extends State<MapScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          outage.area,
+                          outage.affectedArea,
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -267,14 +540,24 @@ class _MapScreenState extends State<MapScreen> {
               _buildDetailRow(
                 Icons.access_time,
                 'Duration',
-                '2 hours 30 minutes',
+                '${outage.actualDuration.inHours}h ${outage.actualDuration.inMinutes % 60}m',
               ),
-              const SizedBox(height: 12),
-              _buildDetailRow(
-                Icons.schedule,
-                'Est. Restoration',
-                '4:30 PM',
-              ),
+              if (outage.affectedBarangays.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _buildDetailRow(
+                  Icons.location_on,
+                  'Affected Areas',
+                  outage.affectedBarangays.join(', '),
+                ),
+              ],
+              if (outage.reason != null) ...[
+                const SizedBox(height: 12),
+                _buildDetailRow(
+                  Icons.info,
+                  'Reason',
+                  outage.reason!,
+                ),
+              ],
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -284,7 +567,144 @@ class _MapScreenState extends State<MapScreen> {
                     Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontFamily: 'Bold',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showReportDetails(UserReport report) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.report_problem,
+                      color: Colors.orange,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'User Report',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Bold',
+                          ),
+                        ),
+                        Text(
+                          'Status: ${report.status.toUpperCase()}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                            fontFamily: 'Regular',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildDetailRow(
+                Icons.description,
+                'Description',
+                report.description,
+              ),
+              if (report.address != null) ...[
+                const SizedBox(height: 12),
+                _buildDetailRow(
+                  Icons.location_on,
+                  'Address',
+                  report.address!,
+                ),
+              ],
+              const SizedBox(height: 12),
+              _buildDetailRow(
+                Icons.access_time,
+                'Reported',
+                '${report.timestamp.day}/${report.timestamp.month}/${report.timestamp.year} ${report.timestamp.hour}:${report.timestamp.minute.toString().padLeft(2, '0')}',
+              ),
+              if (report.photoUrls.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'Photos:',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Bold',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 80,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: report.photoUrls.length,
+                    itemBuilder: (context, index) {
+                      return Container(
+                        width: 80,
+                        height: 80,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          image: DecorationImage(
+                            image: NetworkImage(report.photoUrls[index]),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -330,18 +750,4 @@ class _MapScreenState extends State<MapScreen> {
       ],
     );
   }
-}
-
-class OutageMarker {
-  final LatLng position;
-  final PowerStatusType type;
-  final String area;
-  final int affectedUsers;
-
-  OutageMarker({
-    required this.position,
-    required this.type,
-    required this.area,
-    required this.affectedUsers,
-  });
 }

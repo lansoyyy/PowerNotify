@@ -10,6 +10,9 @@ import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/auth/edit_profile_screen.dart';
+import 'screens/help_screen.dart';
+import 'screens/about_screen.dart';
+import 'screens/privacy_policy_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/notification_service.dart';
 
@@ -168,10 +171,17 @@ class PowerNotifyApp extends StatelessWidget {
         '/forgot_password': (context) => const ForgotPasswordScreen(),
         '/edit_profile': (context) => const EditProfileScreen(),
         '/report': (context) => const ReportOutageScreen(),
-        '/report-history': (context) => const ReportHistoryScreen(),
+        '/report_history': (context) => const ReportHistoryScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/notifications': (context) =>
             const SettingsScreen(), // Temporary - will create notifications screen later
+        '/help': (context) => const HelpScreen(),
+        '/about': (context) => const AboutScreen(),
+        '/privacy': (context) => const PrivacyPolicyScreen(),
+        '/terms': (context) =>
+            const PrivacyPolicyScreen(), // Temporary - will create terms screen later
+        '/licenses': (context) =>
+            const AboutScreen(), // Temporary - will create licenses screen later
       },
     );
   }

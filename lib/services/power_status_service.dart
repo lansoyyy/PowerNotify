@@ -137,6 +137,75 @@ class PowerStatusService {
     });
   }
 
+  // Get all outages (both active and historical)
+  Stream<List<Outage>> getAllOutages() {
+    return _firestore
+        .collection('outages')
+        .orderBy('startTime', descending: true)
+        .limit(50) // Limit to last 50 records for performance
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => Outage.fromJson(doc.data() as Map<String, dynamic>))
+          .toList();
+    });
+  }
+
+  // Get historical outages (completed outages)
+  Stream<List<Outage>> getHistoricalOutages(
+      {DateTime? startDate, DateTime? endDate}) {
+    Query query = _firestore.collection('outages').where('endTime',
+        isGreaterThan: DateTime.fromMillisecondsSinceEpoch(0));
+
+    if (startDate != null) {
+      query = query.where('startTime',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+    }
+
+    if (endDate != null) {
+      query = query.where('endTime',
+          isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+    }
+
+    return query
+        .orderBy('startTime', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => Outage.fromJson(doc.data() as Map<String, dynamic>))
+          .toList();
+    });
+  }
+
+  // Get completed scheduled maintenance
+  Stream<List<Outage>> getCompletedMaintenance(
+      {DateTime? startDate, DateTime? endDate}) {
+    Query query = _firestore
+        .collection('outages')
+        .where('isScheduled', isEqualTo: true)
+        .where('endTime',
+            isGreaterThan: DateTime.fromMillisecondsSinceEpoch(0));
+
+    if (startDate != null) {
+      query = query.where('startTime',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+    }
+
+    if (endDate != null) {
+      query = query.where('endTime',
+          isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+    }
+
+    return query
+        .orderBy('startTime', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => Outage.fromJson(doc.data() as Map<String, dynamic>))
+          .toList();
+    });
+  }
+
   // Update power status (for admin)
   Future<void> updatePowerStatus({
     required PowerStatusType status,

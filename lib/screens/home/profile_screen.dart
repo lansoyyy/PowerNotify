@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../../services/auth_service.dart';
+import '../../services/report_service.dart';
 import '../../models/user.dart';
+import '../../models/user_report.dart';
 import '../../utils/colors.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -12,8 +15,11 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
+  final ReportService _reportService = ReportService();
   User? _currentUser;
   bool _isLoading = true;
+  List<UserReport> _userReports = [];
+  StreamSubscription? _reportsSubscription;
 
   @override
   void initState() {
@@ -34,6 +40,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _isLoading = false;
           });
         }
+
+        // Load user reports
+        _loadUserReports(userId);
       } else {
         if (mounted) {
           setState(() {
@@ -54,6 +63,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     }
+  }
+
+  void _loadUserReports(String userId) {
+    _reportsSubscription =
+        _reportService.getUserReportsStream(userId).listen((reports) {
+      if (mounted) {
+        setState(() {
+          _userReports = reports;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _reportsSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -238,14 +264,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             context,
                             Icons.report_outlined,
                             'My Reports',
-                            () {},
+                            () {
+                              Navigator.pushNamed(context, '/report_history');
+                            },
                           ),
-                          _buildMenuItem(
-                            context,
-                            Icons.history,
-                            'Report History',
-                            () {},
-                          ),
+                          if (_userReports.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.history,
+                                    size: 16,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${_userReports.length} report${_userReports.length == 1 ? '' : 's'} submitted',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                      fontFamily: 'Regular',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                       _buildSection(
@@ -256,19 +301,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             context,
                             Icons.help_outline,
                             'Help & FAQ',
-                            () {},
+                            () {
+                              Navigator.pushNamed(context, '/help');
+                            },
                           ),
                           _buildMenuItem(
                             context,
                             Icons.info_outline,
                             'About',
-                            () {},
+                            () {
+                              Navigator.pushNamed(context, '/about');
+                            },
                           ),
                           _buildMenuItem(
                             context,
                             Icons.privacy_tip_outlined,
                             'Privacy Policy',
-                            () {},
+                            () {
+                              Navigator.pushNamed(context, '/privacy');
+                            },
                           ),
                         ],
                       ),
